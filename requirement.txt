@@ -1,0 +1,7 @@
+lxml_html_clean
+streamlit
+scikit-learn 
+pandas 
+numpy
+git+https://github.com/codelucas/newspaper.git
+sumy
