@@ -102,9 +102,31 @@ sumy
   </div>
 
   <div class="section">
+    <h2>🖼️ Screenshots</h2>
+  <h3>🔹 Home Page</h3>
+<img src="homepage.png" width="1000">
+
+<h3>🔹 Real News</h3>
+<img src="realnews.png" width="1000">
+
+<h3>🔹 Fake News</h3>
+<img src="fakenews.png" width="1000">
+
+  </div>
+
+  <div class="section">
     <h2>👨‍💻 Developer</h2>
     <p>Project by Subhadeep Ghosh.<br>
     For contributions or issues, feel free to contact.</p>
+  </div>
+
+  <div class="section">
+    <h2>📌 Disclaimer</h2>
+    <p>
+      This project is developed solely for educational and research purposes.
+      It is not intended for production use or to serve as a definitive fact-checking tool.
+      The predictions made by the model may not always be accurate, and users are encouraged to verify news from official and reliable sources only.
+    </p>
   </div>
 
 </body>
