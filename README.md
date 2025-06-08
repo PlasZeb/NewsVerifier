@@ -59,6 +59,14 @@ python -c "import nltk; nltk.download('punkt_tab')"
     </ol>
   </div>
 
+   <div class="section">
+    <h2>▶️ Prepare Dataset</h2>
+    <pre>
+Run prepare_data.py
+    </pre>
+    <p>This will merge True.csv and False.csv and keep the dataset ready for prediction.</p>
+  </div>
+
   <div class="section">
     <h2>▶️ How to Run</h2>
     <pre>
