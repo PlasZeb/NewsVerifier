@@ -3,6 +3,9 @@ import pickle
 from newspaper import Article
 from urllib.parse import urlparse
 from utils.news_utils import summarize_text
+import nltk 
+nltk.download('punkt_tab')
+
 
 # Load the model and vectorizer
 model = pickle.load(open("model/fake_news_model.pkl", "rb"))
