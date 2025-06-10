@@ -53,10 +53,17 @@ NewsVerifier/
       <li>Install dependencies:
         <pre><code>
 pip install -r requirements.txt
-Now Run the file "initializer.py"
         </code></pre>
       </li>
     </ol>
+  </div>
+
+  <div class="section">
+    <h2>▶️ Launch App 🚀</h2>
+    <pre>
+[Click Here](https://newsverifier-subhadeep.streamlit.app/)
+    </pre>
+    <p>Link : https://newsverifier-subhadeep.streamlit.app/</p>
   </div>
 
    <div class="section">
