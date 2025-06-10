@@ -53,7 +53,7 @@ NewsVerifier/
       <li>Install dependencies:
         <pre><code>
 pip install -r requirements.txt
-python -c "import nltk; nltk.download('punkt_tab')"
+Now Run the file "initializer.py"
         </code></pre>
       </li>
     </ol>
