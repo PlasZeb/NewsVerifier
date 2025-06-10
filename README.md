@@ -11,6 +11,11 @@
   </div>
 
   <div class="section">
+    <h2>▶️ Launch App 🚀</h2>
+    <p>Link : https://newsverifier-subhadeep.streamlit.app/</p>
+  </div>
+
+  <div class="section">
     <h2>🚀 Features</h2>
     <ul>
       <li>🧠 ML-powered Fake News Detection (Logistic Regression)</li>
@@ -56,11 +61,6 @@ pip install -r requirements.txt
         </code></pre>
       </li>
     </ol>
-  </div>
-
-  <div class="section">
-    <h2>▶️ Launch App 🚀</h2>
-    <p>Link : https://newsverifier-subhadeep.streamlit.app/</p>
   </div>
 
    <div class="section">
