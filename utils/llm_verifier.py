@@ -88,7 +88,7 @@ def verify_news_with_llm(news_text, api_key=None):
                 }
             genai.configure(api_key=api_key_found)
         
-        # LLM prompt összeállítása
+        # LLM prompt összeállítása (kizárólag JSON választ kérünk)
         prompt = f"""Elemezd az alábbi hírcikket és döntsd el, hogy valós vagy álhír-e.
 
 HÍRCIKK:
@@ -101,11 +101,11 @@ Elemzési szempontok:
 4. Az írás professzionális vagy amatőr?
 5. Vannak-e ellentmondások vagy valószínűtlen állítások?
 
-Válaszolj JSON formátumban az alábbi formában:
+Válaszolj JSON formátumban az alábbi formában, kizárólag a JSON-t add vissza (lehetőleg ```json kódblokkban), extra szöveg nélkül:
 {{
     "prediction": "REAL" vagy "FAKE" vagy "UNCERTAIN",
     "confidence": "HIGH" vagy "MEDIUM" vagy "LOW",
-    "reasoning": "Short explanation of the AI analysis (max 2-3 sentences)"
+    "reasoning": "Rövid indoklás magyarul (max 2-3 mondat)"
 }}"""
 
         # Gemini modell inicializálása (v1beta-hoz kompatibilis modell)
@@ -120,36 +120,69 @@ Válaszolj JSON formátumban az alábbi formában:
             )
         )
         
-        # Válasz feldolgozása
-        result_text = response.text.strip()
-        
-        # JSON válasz parse-olása
+        # Válasz feldolgozása és JSON kinyerése robusztusan
+        result_text = (response.text or "").strip()
         import json
-        try:
-            # Ha a válasz JSON kód blokkban van, tisztítjuk
-            if "```json" in result_text:
-                result_text = result_text.split("```json")[1].split("```")[0].strip()
-            elif "```" in result_text:
-                result_text = result_text.split("```")[1].split("```")[0].strip()
-            
-            result_json = json.loads(result_text)
-            
-            return {
-                "success": True,
-                "prediction": result_json.get("prediction", "UNCERTAIN"),
-                "confidence": result_json.get("confidence", "LOW"),
-                "reasoning": result_json.get("reasoning", "Nincs indoklás."),
-                "error": None
-            }
-        except json.JSONDecodeError:
-            # Ha nem sikerült JSON-ként parse-olni, visszaadjuk a nyers szöveget
-            return {
-                "success": True,
-                "prediction": "UNCERTAIN",
-                "confidence": "LOW",
-                "reasoning": result_text,
-                "error": None
-            }
+        
+        def extract_json(text: str):
+            # codeblock JSON
+            if "```json" in text:
+                try:
+                    return text.split("```json", 1)[1].split("```", 1)[0].strip()
+                except Exception:
+                    pass
+            # bármilyen codeblock
+            if "```" in text:
+                try:
+                    return text.split("```", 1)[1].split("```", 1)[0].strip()
+                except Exception:
+                    pass
+            # kiegyensúlyozott kapcsos zárójelek keresése
+            start = -1
+            depth = 0
+            for i, ch in enumerate(text):
+                if ch == '{':
+                    if depth == 0:
+                        start = i
+                    depth += 1
+                elif ch == '}':
+                    if depth > 0:
+                        depth -= 1
+                        if depth == 0 and start != -1:
+                            return text[start:i+1].strip()
+            return None
+        
+        json_candidate = extract_json(result_text)
+        if json_candidate:
+            try:
+                result_json = json.loads(json_candidate)
+                pred = (result_json.get("prediction") or "UNCERTAIN").upper()
+                conf = (result_json.get("confidence") or "LOW").upper()
+                reas = result_json.get("reasoning")
+                # Ha üres vagy JSON-szerű, adjunk barátságos alapértelmezést
+                if not isinstance(reas, str) or not reas.strip() or reas.strip().startswith("{"):
+                    outside = result_text.replace(json_candidate, "").strip()
+                    if outside:
+                        reas = outside
+                    else:
+                        reas = f"Az LLM nem adott külön indoklást. Eredmény: {pred}, Bizonyosság: {conf}."
+                return {
+                    "success": True,
+                    "prediction": pred if pred in ["REAL", "FAKE", "UNCERTAIN"] else "UNCERTAIN",
+                    "confidence": conf if conf in ["HIGH", "MEDIUM", "LOW"] else "LOW",
+                    "reasoning": reas,
+                    "error": None
+                }
+            except Exception:
+                pass
+        # Ha minden kudarcot vall, adjunk vissza nyers választ indoklásként
+        return {
+            "success": True,
+            "prediction": "UNCERTAIN",
+            "confidence": "LOW",
+            "reasoning": result_text or "Nincs indoklás.",
+            "error": None
+        }
             
     except Exception as e:
         return {
