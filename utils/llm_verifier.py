@@ -108,8 +108,8 @@ Válaszolj JSON formátumban az alábbi formában:
     "reasoning": "Rövid indoklás magyarul (max 2-3 mondat)"
 }}"""
 
-        # Gemini modell inicializálása
-        model = genai.GenerativeModel('gemini-pro')
+        # Gemini modell inicializálása (v1beta-hoz kompatibilis modell)
+        model = genai.GenerativeModel('gemini-1.5-flash-002')
         
         # API hívás
         response = model.generate_content(
