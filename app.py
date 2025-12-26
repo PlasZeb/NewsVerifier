@@ -83,9 +83,18 @@ if st.session_state["use_llm"]:
     
     # Kulcsforrás felderítése: secrets -> env -> manuális
     # Kulcs keresése több névváltozattal
+    def _clean_key(v: str):
+        if not v:
+            return None
+        # Levágjuk a whitespace-et és a környező idézőjeleket, ha vannak
+        v = v.strip()
+        if len(v) >= 2 and ((v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'"))):
+            v = v[1:-1].strip()
+        return v or None
+
     def _find_key_from_env():
         for k in ["GEMINI_API_KEY", "gemini_api_key", "GEMINI", "GEMINI_KEY"]:
-            v = os.getenv(k)
+            v = _clean_key(os.getenv(k))
             if v:
                 return v
         return None
@@ -93,7 +102,7 @@ if st.session_state["use_llm"]:
     def _find_key_from_secrets():
         try:
             for k in ["GEMINI_API_KEY", "gemini_api_key", "GEMINI", "GEMINI_KEY"]:
-                v = st.secrets.get(k, None)
+                v = _clean_key(st.secrets.get(k, None))
                 if v:
                     return v
         except Exception:

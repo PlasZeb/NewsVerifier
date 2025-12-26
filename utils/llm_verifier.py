@@ -52,12 +52,20 @@ def verify_news_with_llm(news_text, api_key=None):
         if api_key:
             genai.configure(api_key=api_key)
         else:
+            def _clean_key(v: str):
+                if not v:
+                    return None
+                v = v.strip()
+                if len(v) >= 2 and ((v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'"))):
+                    v = v[1:-1].strip()
+                return v or None
+
             def _find_key_from_secrets():
                 if not STREAMLIT_AVAILABLE:
                     return None
                 try:
                     for k in ["GEMINI_API_KEY", "gemini_api_key", "GEMINI", "GEMINI_KEY"]:
-                        v = st.secrets.get(k, None)
+                        v = _clean_key(st.secrets.get(k, None))
                         if v:
                             return v
                 except Exception:
@@ -66,7 +74,7 @@ def verify_news_with_llm(news_text, api_key=None):
 
             def _find_key_from_env():
                 for k in ["GEMINI_API_KEY", "gemini_api_key", "GEMINI", "GEMINI_KEY"]:
-                    v = os.getenv(k)
+                    v = _clean_key(os.getenv(k))
                     if v:
                         return v
                 return None
