@@ -88,11 +88,11 @@ def verify_news_with_llm(news_text, api_key=None):
                 }
             genai.configure(api_key=api_key_found)
         
-        # LLM prompt összeállítása (kizárólag JSON választ kérünk)
+        # LLM prompt összeállítása (szöveges format - sokkal stabilabb mint JSON)
         prompt = f"""Elemezd az alábbi hírcikket és döntsd el, hogy valós vagy álhír-e.
 
 HÍRCIKK:
-{news_text[:8000]}  # Gemini nagyobb kontextust támogat
+{news_text[:8000]}
 
 Elemzési szempontok:
 1. A cikk nyelvezete objektív vagy túlzottan érzelmes/szenzációhajhász?
@@ -101,12 +101,10 @@ Elemzési szempontok:
 4. Az írás professzionális vagy amatőr?
 5. Vannak-e ellentmondások vagy valószínűtlen állítások?
 
-Válaszolj JSON formátumban az alábbi formában, kizárólag a JSON-t add vissza (lehetőleg ```json kódblokkban), extra szöveg nélkül:
-{{
-    "prediction": "REAL" vagy "FAKE" vagy "UNCERTAIN",
-    "confidence": "HIGH" vagy "MEDIUM" vagy "LOW",
-    "reasoning": "Rövid indoklás magyarul (max 2-3 mondat)"
-}}"""
+Válaszolj pontosan ebben a formában:
+PREDICTION: REAL vagy FAKE vagy UNCERTAIN
+CONFIDENCE: HIGH vagy MEDIUM vagy LOW
+REASONING: Rövid indoklás magyarul (max 2-3 mondat)"""
 
         # Gemini modell inicializálása (v1beta-hoz kompatibilis modell)
         model = genai.GenerativeModel('gemini-2.5-flash')
@@ -120,67 +118,34 @@ Válaszolj JSON formátumban az alábbi formában, kizárólag a JSON-t add viss
             )
         )
         
-        # Válasz feldolgozása és JSON kinyerése robusztusan
+        # Válasz feldolgozása: egyszerű szöveges format
         result_text = (response.text or "").strip()
-        import json
         
-        def extract_json(text: str):
-            # codeblock JSON
-            if "```json" in text:
-                try:
-                    return text.split("```json", 1)[1].split("```", 1)[0].strip()
-                except Exception:
-                    pass
-            # bármilyen codeblock
-            if "```" in text:
-                try:
-                    return text.split("```", 1)[1].split("```", 1)[0].strip()
-                except Exception:
-                    pass
-            # kiegyensúlyozott kapcsos zárójelek keresése
-            start = -1
-            depth = 0
-            for i, ch in enumerate(text):
-                if ch == '{':
-                    if depth == 0:
-                        start = i
-                    depth += 1
-                elif ch == '}':
-                    if depth > 0:
-                        depth -= 1
-                        if depth == 0 and start != -1:
-                            return text[start:i+1].strip()
-            return None
+        # Soronkénti feldolgozás
+        lines = [line.strip() for line in result_text.split('\n') if line.strip()]
         
-        json_candidate = extract_json(result_text)
-        if json_candidate:
-            try:
-                result_json = json.loads(json_candidate)
-                pred = (result_json.get("prediction") or "UNCERTAIN").upper()
-                conf = (result_json.get("confidence") or "LOW").upper()
-                reas = result_json.get("reasoning")
-                # Ha üres vagy JSON-szerű, adjunk barátságos alapértelmezést
-                if not isinstance(reas, str) or not reas.strip() or reas.strip().startswith("{"):
-                    outside = result_text.replace(json_candidate, "").strip()
-                    if outside:
-                        reas = outside
-                    else:
-                        reas = f"Az LLM nem adott külön indoklást. Eredmény: {pred}, Bizonyosság: {conf}."
-                return {
-                    "success": True,
-                    "prediction": pred if pred in ["REAL", "FAKE", "UNCERTAIN"] else "UNCERTAIN",
-                    "confidence": conf if conf in ["HIGH", "MEDIUM", "LOW"] else "LOW",
-                    "reasoning": reas,
-                    "error": None
-                }
-            except Exception:
-                pass
-        # Ha minden kudarcot vall, adjunk vissza nyers választ indoklásként
+        pred = "UNCERTAIN"
+        conf = "LOW"
+        reas = "Nincs indoklás."
+        
+        for line in lines:
+            upper_line = line.upper()
+            if upper_line.startswith("PREDICTION:"):
+                pred_val = line.split(":", 1)[1].strip().upper()
+                if pred_val in ["REAL", "FAKE", "UNCERTAIN"]:
+                    pred = pred_val
+            elif upper_line.startswith("CONFIDENCE:"):
+                conf_val = line.split(":", 1)[1].strip().upper()
+                if conf_val in ["HIGH", "MEDIUM", "LOW"]:
+                    conf = conf_val
+            elif upper_line.startswith("REASONING:"):
+                reas = line.split(":", 1)[1].strip()
+        
         return {
             "success": True,
-            "prediction": "UNCERTAIN",
-            "confidence": "LOW",
-            "reasoning": result_text or "Nincs indoklás.",
+            "prediction": pred,
+            "confidence": conf,
+            "reasoning": reas or "Nincs indoklás.",
             "error": None
         }
             
