@@ -81,22 +81,38 @@ if st.session_state["use_llm"]:
     - Ingyenes API: https://aistudio.google.com/app/apikey
     """)
     
-    # Ellenőrzés: kulcs rendelkezésre áll-e környezetben vagy Streamlit titkokban
-    env_key_set = bool(os.getenv("GEMINI_API_KEY"))
+    # Kulcsforrás felderítése: secrets -> env -> manuális
+    env_key_value = os.getenv("GEMINI_API_KEY")
     try:
-        secret_key_set = bool(st.secrets.get("GEMINI_API_KEY", None))
+        secret_key_value = st.secrets.get("GEMINI_API_KEY", None)
     except Exception:
-        secret_key_set = False
-    
-    if env_key_set or secret_key_set:
+        secret_key_value = None
+
+    has_auto_key = bool(secret_key_value or env_key_value)
+
+    if has_auto_key:
         st.success("✅ API kulcs automatikusan betöltve (környezet vagy Streamlit Secrets)!")
-        
+
+        # Alapértelmezésben az automatikus kulcsot használjuk; manuális felülírás opcionális
+        use_override = st.checkbox("Másik API kulcsot adok meg", value=False, key="llm_override_checkbox")
+
+        if use_override:
+            api_key = st.text_input("🔑 Gemini API Kulcs (felülírás):", type="password", placeholder="sk-xxxxxxxxxxxx", key="llm_override_input")
+            if api_key:
+                st.session_state["gemini_api_key"] = api_key
+                st.info("🔑 Kulcs forrása: **Manuális felülírás** (session)")
+        else:
+            # None átadása: a verifier modul a secrets/env kulcsot használja
+            st.session_state["gemini_api_key"] = None
+
         # Diagnostics - honnan jön a kulcs
         with st.expander("🔍 Diagnosztika: API kulcs forrása"):
-            if secret_key_set:
+            if secret_key_value:
                 st.info("📦 Kulcs forrása: **Streamlit Secrets** (GEMINI_API_KEY)")
-            elif env_key_set:
+            elif env_key_value:
                 st.info("🌍 Kulcs forrása: **Környezeti változó** (.env vagy rendszer)")
+            if use_override and st.session_state.get("gemini_api_key"):
+                st.info("✏️ Jelenleg manuálisan megadott kulcsot használsz (session)")
             st.caption("Ha Cloud-on futtat, a Streamlit Secrets az ajánlott módszer.")
     else:
         st.warning("Adj meg egy Gemini API kulcsot:")
