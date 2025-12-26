@@ -5,3 +5,5 @@ pandas
 numpy
 git+https://github.com/codelucas/newspaper.git
 sumy
+google-generativeai
+python-dotenv

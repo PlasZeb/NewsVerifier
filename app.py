@@ -3,9 +3,21 @@ import pickle
 from newspaper import Article
 from urllib.parse import urlparse
 from utils.news_utils import summarize_text
-import nltk 
+from utils.llm_verifier import verify_news_with_llm
+import nltk
+from dotenv import load_dotenv
+import os
+
+# .env fájl betöltése
+load_dotenv()
+
 nltk.download('punkt_tab')
 
+# Streamlit konfiguráció
+st.set_page_config(page_title="NewsVerifier", layout="wide")
+
+# Force refresh
+st.set_option('client.toolbarMode', 'viewer')
 
 # Load the model and vectorizer
 model = pickle.load(open("model/fake_news_model.pkl", "rb"))
@@ -43,9 +55,44 @@ def predict_news(text):
     return prediction
 
 # Streamlit UI
-st.set_page_config(page_title="NewsVerifier", layout="centered")
 st.title("📰 NewsVerifier: Real or Rubbish?")
 st.markdown("Choose how you'd like to verify the news:")
+
+# DEBUG: Ellenőrzés
+st.warning("🔄 **APPLIKÁCIÓ FRISSÍTVE** - v2.2 - MŰKÖDIK!")
+
+# Inicializálás session_state-ben
+if "use_llm" not in st.session_state:
+    st.session_state["use_llm"] = False
+if "gemini_api_key" not in st.session_state:
+    st.session_state["gemini_api_key"] = None
+
+# LLM beállítások - EGYSZERŰ SZEKCIÓ
+st.markdown("## 🤖 Google Gemini AI Beállítás")
+st.session_state["use_llm"] = st.checkbox("✅ Google Gemini AI aktiválása a hír-ellenőrzéshez", value=st.session_state["use_llm"])
+
+if st.session_state["use_llm"]:
+    st.info("""
+    ✨ **Google Gemini AI ellenőrzés aktiválva!**
+    
+    - Részletes AI elemzés minden cikkhez
+    - Indoklás és bizonyossági szint
+    - Ingyenes API: https://aistudio.google.com/app/apikey
+    """)
+    
+    env_key_set = bool(os.getenv("GEMINI_API_KEY"))
+    
+    if env_key_set:
+        st.success("✅ API kulcs automatikusan betöltve .env fájlból!")
+    else:
+        st.warning("Adj meg egy Gemini API kulcsot:")
+        api_key = st.text_input("🔑 Gemini API Kulcs:", type="password", 
+                               placeholder="sk-xxxxxxxxxxxx")
+        if api_key:
+            st.session_state["gemini_api_key"] = api_key
+            st.success("✅ API kulcs elfogadva!")
+
+st.divider()
 
 option = st.radio("Select Verification Mode", ["Verify by Input", "Verify by URL"])
 
@@ -65,6 +112,7 @@ if option == "Verify by Input":
             st.session_state["prediction_result"] = predict_news(st.session_state["user_text"])
 
     if st.session_state["prediction_result"] is not None:
+        st.markdown("### 🎯 ML Model Eredmény:")
         if st.session_state["prediction_result"] == 1:
             st.markdown("<h4 style='color: green;'>🟢 REAL News</h4>", unsafe_allow_html=True)
 
@@ -74,6 +122,31 @@ if option == "Verify by Input":
                 st.success(summary)
         else:
             st.markdown("<h4 style='color: red;'>🔴 FAKE News</h4>", unsafe_allow_html=True)
+        
+        # LLM ellenőrzés hozzáadása
+        if st.session_state["use_llm"]:
+            st.markdown("---")
+            st.markdown("### 🤖 LLM Alapú Elemzés:")
+            with st.spinner("Gemini elemzi a hírt..."):
+                llm_api_key = st.session_state.get("gemini_api_key", None)
+                llm_result = verify_news_with_llm(st.session_state["user_text"], api_key=llm_api_key)
+                
+                if llm_result["success"]:
+                    prediction = llm_result["prediction"]
+                    confidence = llm_result["confidence"]
+                    reasoning = llm_result["reasoning"]
+                    
+                    if prediction == "REAL":
+                        st.markdown(f"<h4 style='color: green;'>🟢 REAL News (Bizonyosság: {confidence})</h4>", unsafe_allow_html=True)
+                    elif prediction == "FAKE":
+                        st.markdown(f"<h4 style='color: red;'>🔴 FAKE News (Bizonyosság: {confidence})</h4>", unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"<h4 style='color: orange;'>🟡 BIZONYTALAN (Bizonyosság: {confidence})</h4>", unsafe_allow_html=True)
+                    
+                    st.markdown("**📊 LLM Indoklás:**")
+                    st.info(reasoning)
+                else:
+                    st.error(f"❌ {llm_result['error']}")
 
 elif option == "Verify by URL":
     user_url = st.text_input("🌐 Enter the news article URL:")
@@ -96,6 +169,7 @@ elif option == "Verify by URL":
         st.markdown(f"**Published on:** {result['publish_date']}")
         st.text_area("📄 Article Content:", value=result['text'][:10000], height=300)
 
+        st.markdown("### 🎯 ML Model Eredmény:")
         if prediction == 1:
             st.markdown("<h4 style='color: green;'>🟢 REAL News</h4>", unsafe_allow_html=True)
             if st.button("🔍 Summarize this article"):
@@ -104,4 +178,29 @@ elif option == "Verify by URL":
                 st.success(summary)
         else:
             st.markdown("<h4 style='color: red;'>🔴 FAKE News</h4>", unsafe_allow_html=True)
+        
+        # LLM ellenőrzés hozzáadása
+        if st.session_state["use_llm"]:
+            st.markdown("---")
+            st.markdown("### 🤖 LLM Alapú Elemzés:")
+            with st.spinner("Gemini elemzi a hírt..."):
+                llm_api_key = st.session_state.get("gemini_api_key", None)
+                llm_result = verify_news_with_llm(result['text'], api_key=llm_api_key)
+                
+                if llm_result["success"]:
+                    prediction_llm = llm_result["prediction"]
+                    confidence = llm_result["confidence"]
+                    reasoning = llm_result["reasoning"]
+                    
+                    if prediction_llm == "REAL":
+                        st.markdown(f"<h4 style='color: green;'>🟢 REAL News (Bizonyosság: {confidence})</h4>", unsafe_allow_html=True)
+                    elif prediction_llm == "FAKE":
+                        st.markdown(f"<h4 style='color: red;'>🔴 FAKE News (Bizonyosság: {confidence})</h4>", unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"<h4 style='color: orange;'>🟡 BIZONYTALAN (Bizonyosság: {confidence})</h4>", unsafe_allow_html=True)
+                    
+                    st.markdown("**📊 LLM Indoklás:**")
+                    st.info(reasoning)
+                else:
+                    st.error(f"❌ {llm_result['error']}")
 
