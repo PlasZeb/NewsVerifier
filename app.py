@@ -82,13 +82,29 @@ if st.session_state["use_llm"]:
     """)
     
     # Kulcsforrás felderítése: secrets -> env -> manuális
-    env_key_value = os.getenv("GEMINI_API_KEY")
-    try:
-        secret_key_value = st.secrets.get("GEMINI_API_KEY", None)
-    except Exception:
-        secret_key_value = None
+    # Kulcs keresése több névváltozattal
+    def _find_key_from_env():
+        for k in ["GEMINI_API_KEY", "gemini_api_key", "GEMINI", "GEMINI_KEY"]:
+            v = os.getenv(k)
+            if v:
+                return v
+        return None
 
-    has_auto_key = bool(secret_key_value or env_key_value)
+    def _find_key_from_secrets():
+        try:
+            for k in ["GEMINI_API_KEY", "gemini_api_key", "GEMINI", "GEMINI_KEY"]:
+                v = st.secrets.get(k, None)
+                if v:
+                    return v
+        except Exception:
+            return None
+        return None
+
+    secret_key_value = _find_key_from_secrets()
+    env_key_value = _find_key_from_env()
+
+    auto_key_value = secret_key_value or env_key_value
+    has_auto_key = bool(auto_key_value)
 
     if has_auto_key:
         st.success("✅ API kulcs automatikusan betöltve (környezet vagy Streamlit Secrets)!")
@@ -102,8 +118,8 @@ if st.session_state["use_llm"]:
                 st.session_state["gemini_api_key"] = api_key
                 st.info("🔑 Kulcs forrása: **Manuális felülírás** (session)")
         else:
-            # None átadása: a verifier modul a secrets/env kulcsot használja
-            st.session_state["gemini_api_key"] = None
+            # Ha van automatikus kulcs, tegyük be session-be is, hogy a verifier biztosan megkapja
+            st.session_state["gemini_api_key"] = auto_key_value
 
         # Diagnostics - honnan jön a kulcs
         with st.expander("🔍 Diagnosztika: API kulcs forrása"):

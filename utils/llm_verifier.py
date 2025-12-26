@@ -48,22 +48,37 @@ def verify_news_with_llm(news_text, api_key=None):
                 "error": "A 'google-generativeai' csomag nincs telepítve. Telepítsd a környezetbe (pip install google-generativeai vagy add hozzá a requirements.txt-hez), majd indítsd újra az alkalmazást."
             }
 
-        # API kulcs beállítása
+        # API kulcs beállítása (robosztus keresés secrets/env)
         if api_key:
             genai.configure(api_key=api_key)
         else:
-            # Streamlit Cloud eset: próbáljuk a titkokból olvasni
-            if STREAMLIT_AVAILABLE:
-                api_key = st.secrets.get("GEMINI_API_KEY", None)
-            # Környezeti változóból próbálja beolvasni
-            if not api_key:
-                api_key = os.getenv("GEMINI_API_KEY")
-            if not api_key:
+            def _find_key_from_secrets():
+                if not STREAMLIT_AVAILABLE:
+                    return None
+                try:
+                    for k in ["GEMINI_API_KEY", "gemini_api_key", "GEMINI", "GEMINI_KEY"]:
+                        v = st.secrets.get(k, None)
+                        if v:
+                            return v
+                except Exception:
+                    return None
+                return None
+
+            def _find_key_from_env():
+                for k in ["GEMINI_API_KEY", "gemini_api_key", "GEMINI", "GEMINI_KEY"]:
+                    v = os.getenv(k)
+                    if v:
+                        return v
+                return None
+
+            api_key_found = _find_key_from_secrets() or _find_key_from_env()
+
+            if not api_key_found:
                 return {
                     "success": False,
                     "error": "Gemini API kulcs nincs beállítva. Állítsd be a GEMINI_API_KEY-t (Streamlit secrets vagy .env), vagy add meg az API kulcsot az alkalmazásban."
                 }
-            genai.configure(api_key=api_key)
+            genai.configure(api_key=api_key_found)
         
         # LLM prompt összeállítása
         prompt = f"""Elemezd az alábbi hírcikket és döntsd el, hogy valós vagy álhír-e.
