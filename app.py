@@ -117,18 +117,9 @@ if st.session_state["use_llm"]:
 
     if has_auto_key:
         st.success("✅ API kulcs automatikusan betöltve (környezet vagy Streamlit Secrets)!")
-
-        # Alapértelmezésben az automatikus kulcsot használjuk; manuális felülírás opcionális
-        use_override = st.checkbox("Másik API kulcsot adok meg", value=False, key="llm_override_checkbox")
-
-        if use_override:
-            api_key = st.text_input("🔑 Gemini API Kulcs (felülírás):", type="password", placeholder="sk-xxxxxxxxxxxx", key="llm_override_input")
-            if api_key:
-                st.session_state["gemini_api_key"] = api_key
-                st.info("🔑 Kulcs forrása: **Manuális felülírás** (session)")
-        else:
-            # Ha van automatikus kulcs, tegyük be session-be is, hogy a verifier biztosan megkapja
-            st.session_state["gemini_api_key"] = auto_key_value
+        
+        # Automatikus kulcsot használjuk session-ben
+        st.session_state["gemini_api_key"] = auto_key_value
 
         # Diagnostics - honnan jön a kulcs
         with st.expander("🔍 Diagnosztika: API kulcs forrása"):
@@ -136,8 +127,6 @@ if st.session_state["use_llm"]:
                 st.info("📦 Kulcs forrása: **Streamlit Secrets** (GEMINI_API_KEY)")
             elif env_key_value:
                 st.info("🌍 Kulcs forrása: **Környezeti változó** (.env vagy rendszer)")
-            if use_override and st.session_state.get("gemini_api_key"):
-                st.info("✏️ Jelenleg manuálisan megadott kulcsot használsz (session)")
             st.caption("Ha Cloud-on futtat, a Streamlit Secrets az ajánlott módszer.")
     else:
         st.warning("Adj meg egy Gemini API kulcsot:")
