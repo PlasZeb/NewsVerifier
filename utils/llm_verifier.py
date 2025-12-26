@@ -101,8 +101,8 @@ REASONING: Very brief explanation in 1-2 short sentences maximum (Hungarian)
 
 Be concise. Maximum 2 sentences for reasoning."""
 
-        # Gemini modell inicializálása (v1beta-hoz kompatibilis modell)
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        # Gemini modell inicializálása (lite verzió - gyorsabb és olcsóbb)
+        model = genai.GenerativeModel('gemini-2.5-flash-lite')
         
         # API hívás - rövid válasz, NO STREAMING
         response = model.generate_content(
