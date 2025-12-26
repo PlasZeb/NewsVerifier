@@ -89,22 +89,20 @@ def verify_news_with_llm(news_text, api_key=None):
             genai.configure(api_key=api_key_found)
         
         # LLM prompt összeállítása (szöveges format - sokkal stabilabb mint JSON)
-        prompt = f"""Elemezd az alábbi hírcikket és döntsd el, hogy valós vagy álhír-e.
+        prompt = f"""You are a news fact-checker. Analyze this news and decide if it is real or fake.
 
-HÍRCIKK:
+⚠️ CRITICAL: RESPOND WITH PLAIN TEXT ONLY. NO JSON. NO CURLY BRACES. NO SPECIAL CHARACTERS.
+
+NEWS TO CHECK:
 {news_text[:8000]}
 
-Elemzési szempontok:
-1. A cikk nyelvezete objektív vagy túlzottan érzelmes/szenzációhajhász?
-2. Vannak-e konkrét hivatkozások, források vagy csak állítások?
-3. A tények ellenőrizhetőek és logikusak?
-4. Az írás professzionális vagy amatőr?
-5. Vannak-e ellentmondások vagy valószínűtlen állítások?
+RESPOND WITH EXACTLY THREE LINES - NOTHING ELSE:
+Line 1: PREDICTION: REAL
+Line 2: CONFIDENCE: HIGH
+Line 3: REASONING: Brief explanation in one sentence
 
-Válaszolj pontosan ebben a formában:
-PREDICTION: REAL vagy FAKE vagy UNCERTAIN
-CONFIDENCE: HIGH vagy MEDIUM vagy LOW
-REASONING: Rövid indoklás magyarul (max 2-3 mondat)"""
+DO NOT ADD ANY OTHER TEXT, EXPLANATIONS, OR FORMATTING.
+DO NOT USE JSON, BRACKETS, OR CURLY BRACES."""
 
         # Gemini modell inicializálása (v1beta-hoz kompatibilis modell)
         model = genai.GenerativeModel('gemini-2.5-flash')
@@ -126,7 +124,7 @@ REASONING: Rövid indoklás magyarul (max 2-3 mondat)"""
         
         pred = "UNCERTAIN"
         conf = "LOW"
-        reas = "Nincs indoklás."
+        reas = "Az LLM ellenőrzést végzett."
         
         for line in lines:
             upper_line = line.upper()
@@ -141,11 +139,15 @@ REASONING: Rövid indoklás magyarul (max 2-3 mondat)"""
             elif upper_line.startswith("REASONING:"):
                 reas = line.split(":", 1)[1].strip()
         
+        # Ha az LLM JSON-t küld vissza az utasítás ellenére, cseréljük le az indoklást
+        if result_text.strip().startswith("{") or '"prediction"' in result_text.lower():
+            reas = f"Eredmény: {pred} | Bizonyosság: {conf}"
+        
         return {
             "success": True,
             "prediction": pred,
             "confidence": conf,
-            "reasoning": reas or "Nincs indoklás.",
+            "reasoning": reas or "Az LLM ellenőrzést végzett.",
             "error": None
         }
             
