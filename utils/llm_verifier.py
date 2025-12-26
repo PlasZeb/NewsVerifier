@@ -88,35 +88,38 @@ def verify_news_with_llm(news_text, api_key=None):
                 }
             genai.configure(api_key=api_key_found)
         
-        # LLM prompt összeállítása - CSAK 2 sor (PREDICTION + CONFIDENCE)
-        prompt = f"""ANALYZE THIS NEWS QUICKLY AND ANSWER WITH TWO LINES ONLY:
+        # LLM prompt összeállítása - 3 sor: PREDICTION + CONFIDENCE + rövid REASONING
+        prompt = f"""Analyze this news article and decide if it is REAL, FAKE, or UNCERTAIN.
 
 NEWS:
 {news_text[:5000]}
 
-RESPOND WITH EXACTLY TWO LINES - NOTHING ELSE, NO EXPLANATION:
+RESPOND WITH EXACTLY 3 LINES:
 PREDICTION: REAL or FAKE or UNCERTAIN
-CONFIDENCE: HIGH or MEDIUM or LOW"""
+CONFIDENCE: HIGH or MEDIUM or LOW
+REASONING: Very brief explanation in 1-2 short sentences maximum (Hungarian)
+
+Be concise. Maximum 2 sentences for reasoning."""
 
         # Gemini modell inicializálása (v1beta-hoz kompatibilis modell)
         model = genai.GenerativeModel('gemini-2.5-flash')
         
-        # API hívás - NO STREAMING, így nem csonkul
+        # API hívás - rövid válasz, NO STREAMING
         response = model.generate_content(
             prompt,
             generation_config=genai.types.GenerationConfig(
-                temperature=0.3,  # Alacsonyabb érték konzisztensebb eredményhez
-                max_output_tokens=1000,  # Bővebb limit az indoklásnak
+                temperature=0.3,
+                max_output_tokens=250,  # Rövid limit: csak 1-2 mondatot várunk
                 top_p=0.9,
                 top_k=40
             ),
-            stream=False  # Teljes válasz egy kérésben
+            stream=False
         )
         
         # Debug: ellenőrizzük, hogy a válasz teljes-e
         finish_reason = response.candidates[0].finish_reason if response.candidates else None
         
-        # Válasz feldolgozása: csak PREDICTION + CONFIDENCE sorokat várunk
+        # Válasz feldolgozása: PREDICTION + CONFIDENCE + REASONING
         result_text = (response.text or "").strip()
         
         # Soronkénti feldolgozás
@@ -124,6 +127,7 @@ CONFIDENCE: HIGH or MEDIUM or LOW"""
         
         pred = "UNCERTAIN"
         conf = "LOW"
+        reas = "Az LLM rövid elemzést végzett."
         
         for line in lines:
             upper_line = line.upper()
@@ -135,17 +139,15 @@ CONFIDENCE: HIGH or MEDIUM or LOW"""
                 conf_val = line.split(":", 1)[1].strip().upper()
                 if conf_val in ["HIGH", "MEDIUM", "LOW"]:
                     conf = conf_val
-        
-        # Indoklás: az LLM válasz többi sora vagy általános üzenet
-        all_text = result_text.replace("PREDICTION:", "").replace("CONFIDENCE:", "").strip()
-        # Csak az első 100 karakter az indoklás
-        reas = all_text[:150] if all_text else f"Az LLM úgy értékelte: {pred} (Bizonyosság: {conf})"
+            elif upper_line.startswith("REASONING:"):
+                # REASONING sor - az LLM rövid elemzése
+                reas = line.split(":", 1)[1].strip()
         
         return {
             "success": True,
             "prediction": pred,
             "confidence": conf,
-            "reasoning": reas,
+            "reasoning": reas or "Az LLM rövid elemzést végzett.",
             "error": None
         }
 
