@@ -109,7 +109,7 @@ Válaszolj JSON formátumban az alábbi formában:
 }}"""
 
         # Gemini modell inicializálása (v1beta-hoz kompatibilis modell)
-        model = genai.GenerativeModel('gemini-1.5-flash-002')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         # API hívás
         response = model.generate_content(
