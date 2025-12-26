@@ -60,7 +60,7 @@ st.title("📰 NewsVerifier: Real or Rubbish?")
 st.markdown("Choose how you'd like to verify the news:")
 
 # DEBUG: Ellenőrzés
-st.warning("🔄 **APPLIKÁCIÓ FRISSÍTVE** - v2.2 - MŰKÖDIK!")
+st.warning("🔄 **APPLIKÁCIÓ FRISSÍTVE** - v2.3 - MŰKÖDIK!")
 
 # Inicializálás session_state-ben
 if "use_llm" not in st.session_state:
