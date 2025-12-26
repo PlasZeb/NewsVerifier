@@ -11,8 +11,14 @@ import os
 # .env fájl betöltése
 load_dotenv()
 
-# NLTK tokenizáló letöltése (helyes resource név)
-nltk.download('punkt')
+# NLTK tokenizáló letöltése és path beállítása
+NLTK_DIR = "/tmp/nltk_data"
+os.makedirs(NLTK_DIR, exist_ok=True)
+try:
+    nltk.data.path.append(NLTK_DIR)
+    nltk.download('punkt', quiet=True, download_dir=NLTK_DIR)
+except Exception:
+    pass
 
 # Streamlit konfiguráció
 st.set_page_config(page_title="NewsVerifier", layout="wide")

@@ -5,15 +5,21 @@ from sumy.summarizers.lsa import LsaSummarizer
 # Opcionális: NLTK 'punkt' biztosítása, mert a Sumy tokenizálója NLTK-t használhat
 def _ensure_nltk_punkt():
     try:
+        import os
         import nltk
+        # Állítsuk be a data path-ot Cloud kompatibilis helyre
+        data_dir = os.environ.get('NLTK_DATA', '/tmp/nltk_data')
+        os.makedirs(data_dir, exist_ok=True)
+        if data_dir not in nltk.data.path:
+            nltk.data.path.append(data_dir)
         # Ha nincs letöltve, megpróbáljuk
-        nltk.data.find('tokenizers/punkt')
-    except Exception:
         try:
-            import nltk
-            nltk.download('punkt')
-        except Exception:
-            pass
+            nltk.data.find('tokenizers/punkt')
+        except LookupError:
+            nltk.download('punkt', quiet=True, download_dir=data_dir)
+    except Exception:
+        # Ha semmi nem sikerül, hagyjuk, majd regex fallback működni fog
+        pass
 
 def summarize_text(text, sentence_count=3):
     try:
@@ -42,11 +48,16 @@ def summarize_text(text, sentence_count=3):
             return " ".join(sentences[:sentence_count]) or "Summary could not be generated."
 
     except Exception as e:
-        # Pontosabb hibaüzenet az NLTK erőforrásokra
-        msg = str(e)
-        if 'punkt_tab' in msg or 'punkt' in msg:
-            return "Summary generation error: NLTK 'punkt' tokenizer hiányzik. Futtasd: python -c \"import nltk; nltk.download('punkt')\""
-        return f"Summary generation error: {msg}"
+        # Hiba esetén próbáljunk regex alapú fallback-ot, hogy ne álljon le
+        try:
+            import re
+            sentences = re.split(r"(?<=[.!?])\s+", text or "")
+            if sentences:
+                return " ".join(sentences[:sentence_count])
+        except Exception:
+            pass
+        # Végső barátságos hibaüzenet
+        return "Summary could not be generated due to missing tokenizers."
 
 
 
