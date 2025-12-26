@@ -105,7 +105,7 @@ Válaszolj JSON formátumban az alábbi formában:
 {{
     "prediction": "REAL" vagy "FAKE" vagy "UNCERTAIN",
     "confidence": "HIGH" vagy "MEDIUM" vagy "LOW",
-    "reasoning": "Rövid indoklás magyarul (max 2-3 mondat)"
+    "reasoning": "Short explanation of the AI analysis (max 2-3 sentences)"
 }}"""
 
         # Gemini modell inicializálása (v1beta-hoz kompatibilis modell)
