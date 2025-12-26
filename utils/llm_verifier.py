@@ -88,21 +88,15 @@ def verify_news_with_llm(news_text, api_key=None):
                 }
             genai.configure(api_key=api_key_found)
         
-        # LLM prompt összeállítása (szöveges format - sokkal stabilabb mint JSON)
-        prompt = f"""You are a news fact-checker. Analyze this news and decide if it is real or fake.
+        # LLM prompt összeállítása - CSAK 2 sor (PREDICTION + CONFIDENCE)
+        prompt = f"""ANALYZE THIS NEWS QUICKLY AND ANSWER WITH TWO LINES ONLY:
 
-⚠️ CRITICAL: RESPOND WITH PLAIN TEXT ONLY. NO JSON. NO CURLY BRACES. NO SPECIAL CHARACTERS.
+NEWS:
+{news_text[:5000]}
 
-NEWS TO CHECK:
-{news_text[:8000]}
-
-RESPOND WITH EXACTLY THREE LINES - NOTHING ELSE:
-Line 1: PREDICTION: REAL
-Line 2: CONFIDENCE: HIGH
-Line 3: REASONING: Brief explanation in one sentence
-
-DO NOT ADD ANY OTHER TEXT, EXPLANATIONS, OR FORMATTING.
-DO NOT USE JSON, BRACKETS, OR CURLY BRACES."""
+RESPOND WITH EXACTLY TWO LINES - NOTHING ELSE, NO EXPLANATION:
+PREDICTION: REAL or FAKE or UNCERTAIN
+CONFIDENCE: HIGH or MEDIUM or LOW"""
 
         # Gemini modell inicializálása (v1beta-hoz kompatibilis modell)
         model = genai.GenerativeModel('gemini-2.5-flash')
@@ -122,21 +116,14 @@ DO NOT USE JSON, BRACKETS, OR CURLY BRACES."""
         # Debug: ellenőrizzük, hogy a válasz teljes-e
         finish_reason = response.candidates[0].finish_reason if response.candidates else None
         
-        # Válasz feldolgozása: egyszerű szöveges format
+        # Válasz feldolgozása: csak PREDICTION + CONFIDENCE sorokat várunk
         result_text = (response.text or "").strip()
-        
-        # Ha a válasz vágva marad (incomplete), hozzáadunk egy pontos sorvéget
-        if result_text and not result_text.endswith(('\n', '.')):
-            # Ellenőrizzük, hogy a REASONING sor be van-e fejezve
-            if 'REASONING:' in result_text and not result_text.count('\n') >= 2:
-                pass  # Ha csak 1-2 sor van és vágva marad, hagyjuk úgy
         
         # Soronkénti feldolgozás
         lines = [line.strip() for line in result_text.split('\n') if line.strip()]
         
         pred = "UNCERTAIN"
         conf = "LOW"
-        reas = "Az LLM ellenőrzést végzett."
         
         for line in lines:
             upper_line = line.upper()
@@ -148,16 +135,11 @@ DO NOT USE JSON, BRACKETS, OR CURLY BRACES."""
                 conf_val = line.split(":", 1)[1].strip().upper()
                 if conf_val in ["HIGH", "MEDIUM", "LOW"]:
                     conf = conf_val
-            elif upper_line.startswith("REASONING:"):
-                reas = line.split(":", 1)[1].strip()
         
-        # Ha az LLM JSON-t küld vissza az utasítás ellenére, cseréljük le az indoklást
-        if result_text.strip().startswith("{") or '"prediction"' in result_text.lower():
-            reas = f"Eredmény: {pred} | Bizonyosság: {conf}"
-        
-        # Ha az indoklás üres vagy hiányos (túl rövid), add hozzá a klasszikus üzenetet
-        if not reas or reas == "Az LLM ellenőrzést végzett.":
-            reas = f"Az LLM úgy értékelte: {pred} (Bizonyosság: {conf})"
+        # Indoklás: az LLM válasz többi sora vagy általános üzenet
+        all_text = result_text.replace("PREDICTION:", "").replace("CONFIDENCE:", "").strip()
+        # Csak az első 100 karakter az indoklás
+        reas = all_text[:150] if all_text else f"Az LLM úgy értékelte: {pred} (Bizonyosság: {conf})"
         
         return {
             "success": True,
@@ -166,6 +148,7 @@ DO NOT USE JSON, BRACKETS, OR CURLY BRACES."""
             "reasoning": reas,
             "error": None
         }
+
 
             
     except Exception as e:
