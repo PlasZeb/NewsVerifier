@@ -4,8 +4,22 @@ Használat: Google Gemini API-n keresztül ellenőrzi a hír hitelességét
 """
 
 import os
-import google.generativeai as genai
 from dotenv import load_dotenv
+
+# Opcionális importok védetten, hogy az app ne omoljon össze, ha a csomag hiányzik
+try:
+    import google.generativeai as genai
+    GENAI_AVAILABLE = True
+except Exception:
+    genai = None
+    GENAI_AVAILABLE = False
+
+try:
+    import streamlit as st
+    STREAMLIT_AVAILABLE = True
+except Exception:
+    st = None
+    STREAMLIT_AVAILABLE = False
 
 # .env fájl betöltése
 load_dotenv()
@@ -27,16 +41,27 @@ def verify_news_with_llm(news_text, api_key=None):
             - error (str): Hibaüzenet, ha volt hiba
     """
     try:
+        # Ellenőrizzük, hogy a google-generativeai csomag elérhető-e
+        if not GENAI_AVAILABLE:
+            return {
+                "success": False,
+                "error": "A 'google-generativeai' csomag nincs telepítve. Telepítsd a környezetbe (pip install google-generativeai vagy add hozzá a requirements.txt-hez), majd indítsd újra az alkalmazást."
+            }
+
         # API kulcs beállítása
         if api_key:
             genai.configure(api_key=api_key)
         else:
+            # Streamlit Cloud eset: próbáljuk a titkokból olvasni
+            if STREAMLIT_AVAILABLE:
+                api_key = st.secrets.get("GEMINI_API_KEY", None)
             # Környezeti változóból próbálja beolvasni
-            api_key = os.getenv("GEMINI_API_KEY")
+            if not api_key:
+                api_key = os.getenv("GEMINI_API_KEY")
             if not api_key:
                 return {
                     "success": False,
-                    "error": "Gemini API kulcs nincs beállítva. Állítsd be a GEMINI_API_KEY környezeti változót vagy add meg az API kulcsot."
+                    "error": "Gemini API kulcs nincs beállítva. Állítsd be a GEMINI_API_KEY-t (Streamlit secrets vagy .env), vagy add meg az API kulcsot az alkalmazásban."
                 }
             genai.configure(api_key=api_key)
         

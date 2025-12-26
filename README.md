@@ -24,6 +24,7 @@
       <li>📁 Logs all predictions with timestamps and source</li>
       <li>📊 Displays performance metrics for predictions and summaries</li>
       <li>✅ Clean and interactive UI with error handling</li>
+      <li>🤖 Optional: <strong>Gemini LLM verification</strong> with reasoning & confidence</li>
     </ul>
   </div>
 
@@ -110,7 +111,23 @@ nltk
 newspaper3k
 lxml
 sumy
+google-generativeai
+python-dotenv
 </code></pre>
+  </div>
+
+  <div class="section">
+    <h2>🤖 LLM Verification (Gemini)</h2>
+    <p>The app supports optional news verification via Google Gemini:</p>
+    <ul>
+      <li>Enable LLM in the app UI</li>
+      <li>Provide <strong>GEMINI_API_KEY</strong> via <strong>.env</strong> (local) or <strong>Streamlit Cloud Secrets</strong></li>
+      <li>Get an API key here: <a href="https://aistudio.google.com/app/apikey">https://aistudio.google.com/app/apikey</a></li>
+    </ul>
+    <h3>Cloud deployment</h3>
+    <p>On Streamlit Cloud, use <strong>Manage app → Settings → Secrets</strong> and add:</p>
+    <pre><code>GEMINI_API_KEY = your-actual-api-key</code></pre>
+    <p>Then redeploy or restart the app.</p>
   </div>
 
   <div class="section">

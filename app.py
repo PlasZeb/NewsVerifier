@@ -11,7 +11,8 @@ import os
 # .env fájl betöltése
 load_dotenv()
 
-nltk.download('punkt_tab')
+# NLTK tokenizáló letöltése (helyes resource név)
+nltk.download('punkt')
 
 # Streamlit konfiguráció
 st.set_page_config(page_title="NewsVerifier", layout="wide")
@@ -80,10 +81,23 @@ if st.session_state["use_llm"]:
     - Ingyenes API: https://aistudio.google.com/app/apikey
     """)
     
+    # Ellenőrzés: kulcs rendelkezésre áll-e környezetben vagy Streamlit titkokban
     env_key_set = bool(os.getenv("GEMINI_API_KEY"))
+    try:
+        secret_key_set = bool(st.secrets.get("GEMINI_API_KEY", None))
+    except Exception:
+        secret_key_set = False
     
-    if env_key_set:
-        st.success("✅ API kulcs automatikusan betöltve .env fájlból!")
+    if env_key_set or secret_key_set:
+        st.success("✅ API kulcs automatikusan betöltve (környezet vagy Streamlit Secrets)!")
+        
+        # Diagnostics - honnan jön a kulcs
+        with st.expander("🔍 Diagnosztika: API kulcs forrása"):
+            if secret_key_set:
+                st.info("📦 Kulcs forrása: **Streamlit Secrets** (GEMINI_API_KEY)")
+            elif env_key_set:
+                st.info("🌍 Kulcs forrása: **Környezeti változó** (.env vagy rendszer)")
+            st.caption("Ha Cloud-on futtat, a Streamlit Secrets az ajánlott módszer.")
     else:
         st.warning("Adj meg egy Gemini API kulcsot:")
         api_key = st.text_input("🔑 Gemini API Kulcs:", type="password", 
@@ -91,6 +105,7 @@ if st.session_state["use_llm"]:
         if api_key:
             st.session_state["gemini_api_key"] = api_key
             st.success("✅ API kulcs elfogadva!")
+            st.info("🔑 Kulcs forrása: **Manuális bemenet** (session)")
 
 st.divider()
 

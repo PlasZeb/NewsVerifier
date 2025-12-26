@@ -44,7 +44,7 @@ Az eredeti ML modell mellé mostmár **Google Gemini AI-alapú ellenőrzés** is
 
 2. A bal oldali sidebar-ban:
    - Jelöld be az "LLM alapú ellenőrzés használata" opciót
-   - Add meg az OpenAI API kulcsot (ha még nincs beállítva)
+   - Add meg a Gemini API kulcsot (ha még nincs beállítva)
 
 3. Használd a szokásos módon:
    - **Input módban**: Írd be vagy másold be a hírt
@@ -93,6 +93,20 @@ A legtöbb személyes használatra ez bőven elegendő!
 **"Gemini API kulcs nincs beállítva"**
 - Ellenőrizd, hogy helyesen állítottad-e be az API kulcsot
 - Próbáld meg közvetlenül az alkalmazásban megadni
+- Streamlit Cloud esetén: add hozzá a titkokhoz (Settings → Secrets → GEMINI_API_KEY)
+
+### Streamlit Cloud Secrets
+
+Streamlit Cloud deploy esetén a `.env` fájl nem töltődik be. Használd a Cloud titkokat:
+
+1. Nyisd meg a projektedet a Streamlit Cloudon
+2. Jobb alsó sarok: "Manage app" → Settings → Secrets
+3. Adj hozzá egy új titkot:
+   - Kulcs: `GEMINI_API_KEY`
+   - Érték: a tényleges Gemini API kulcsod
+4. Indítsd újra az appot, hogy a titok elérhető legyen
+
+Az alkalmazás automatikusan felismeri a Streamlit Secrets-ből vagy a környezetből érkező kulcsot.
 
 **"Rate limit exceeded"**
 - Túl sok kérést küldtél rövid időn belül (60/perc limit)
