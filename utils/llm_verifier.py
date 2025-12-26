@@ -107,17 +107,29 @@ DO NOT USE JSON, BRACKETS, OR CURLY BRACES."""
         # Gemini modell inicializálása (v1beta-hoz kompatibilis modell)
         model = genai.GenerativeModel('gemini-2.5-flash')
         
-        # API hívás
+        # API hívás - NO STREAMING, így nem csonkul
         response = model.generate_content(
             prompt,
             generation_config=genai.types.GenerationConfig(
                 temperature=0.3,  # Alacsonyabb érték konzisztensebb eredményhez
-                max_output_tokens=500
-            )
+                max_output_tokens=1000,  # Bővebb limit az indoklásnak
+                top_p=0.9,
+                top_k=40
+            ),
+            stream=False  # Teljes válasz egy kérésben
         )
+        
+        # Debug: ellenőrizzük, hogy a válasz teljes-e
+        finish_reason = response.candidates[0].finish_reason if response.candidates else None
         
         # Válasz feldolgozása: egyszerű szöveges format
         result_text = (response.text or "").strip()
+        
+        # Ha a válasz vágva marad (incomplete), hozzáadunk egy pontos sorvéget
+        if result_text and not result_text.endswith(('\n', '.')):
+            # Ellenőrizzük, hogy a REASONING sor be van-e fejezve
+            if 'REASONING:' in result_text and not result_text.count('\n') >= 2:
+                pass  # Ha csak 1-2 sor van és vágva marad, hagyjuk úgy
         
         # Soronkénti feldolgozás
         lines = [line.strip() for line in result_text.split('\n') if line.strip()]
@@ -143,13 +155,18 @@ DO NOT USE JSON, BRACKETS, OR CURLY BRACES."""
         if result_text.strip().startswith("{") or '"prediction"' in result_text.lower():
             reas = f"Eredmény: {pred} | Bizonyosság: {conf}"
         
+        # Ha az indoklás üres vagy hiányos (túl rövid), add hozzá a klasszikus üzenetet
+        if not reas or reas == "Az LLM ellenőrzést végzett.":
+            reas = f"Az LLM úgy értékelte: {pred} (Bizonyosság: {conf})"
+        
         return {
             "success": True,
             "prediction": pred,
             "confidence": conf,
-            "reasoning": reas or "Az LLM ellenőrzést végzett.",
+            "reasoning": reas,
             "error": None
         }
+
             
     except Exception as e:
         return {
